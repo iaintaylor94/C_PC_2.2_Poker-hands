@@ -15,6 +15,7 @@ enum value { TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, 
 // Define Structs
 struct card { enum suit s; enum value v; };
 struct hand { struct card c[gCardsInHand]; };
+struct handPair { struct hand black; struct hand white; };
 
 // Declare input file handles
 FILE *gInputFile;
@@ -23,14 +24,20 @@ FILE *gInputFile;
 void usage (char *);
 
 // Read Hand
-enum value getValue (char);
-enum suit getSuit (char);
-struct hand readHand (void);
+enum value charToValue (char);
+enum suit charToSuit (char);
+struct handPair readHand (void);
+// Print Hand
+void printValue (enum value);
+void printSuit (enum suit);
+void printHand (struct hand);
 
 // Rank Functions - straight/flush/straight flush
 int straight (struct hand);
 bool flush (struct hand);
 int straightFlush (struct hand);
+// Compare Hands
+void compareHands (struct handPair);
 
 
 int main(int argc, char *argv[]) {
@@ -48,7 +55,10 @@ int main(int argc, char *argv[]) {
 
   /*--------------------------------MAIN PROGRAM START------------------------------------*/
 
-
+  struct handPair hp = readHand();
+  printHand (hp.black);
+  printHand (hp.white);
+  printf ("\n");
 
 
   
@@ -66,7 +76,7 @@ void usage (char *cmd) {
   exit (EXIT_SUCCESS);
 }
 
-enum value getValue (char c) {
+enum value charToValue (char c) {
   switch (c) {
     case '2':
       return TWO;
@@ -92,6 +102,9 @@ enum value getValue (char c) {
     case '9':
       return NINE;
       break;
+    case 'T':
+      return TEN;
+      break;
     case 'J':
       return JACK;
       break;
@@ -111,7 +124,7 @@ enum value getValue (char c) {
   }  
 }
 
-enum suit getSuit (char c) {
+enum suit charToSuit (char c) {
   switch (c) {
     case 'C':
       return CLUBS;
@@ -132,23 +145,112 @@ enum suit getSuit (char c) {
   }
 }
 
-struct hand readHand (void) {
+struct handPair readHand (void) {
   // I/O
   const int lineLength = 31;
   char inputArray[lineLength];
   fgets (inputArray, lineLength, gInputFile);
   inputArray[lineLength - 1] = '\0'; // Replace '\n' with '\0'
 
-  // Fill Hand
-  struct hand h;
+  // Fill black Hand
+  struct hand b;
   for (int i = 0; i < gCardsInHand; i++) {
-    h.c[i].v = getValue(inputArray[i * 3 + 0]); // Get Value
-    h.c[i].s = getSuit(inputArray[i * 3 + 1]); // Get Suit
+    b.c[i].v = charToValue(inputArray[i * 3 + 0]); // Get Value
+    b.c[i].s = charToSuit(inputArray[i * 3 + 1]); // Get Suit
+    // Strip Newline - do nothing
+  }
+  // Fill white Hand
+  struct hand w;
+  for (int i = gCardsInHand, j = 0; i < 2 * gCardsInHand; i++, j++) {
+    w.c[j].v = charToValue(inputArray[i * 3 + 0]); // Get Value
+    w.c[j].s = charToSuit(inputArray[i * 3 + 1]); // Get Suit
     // Strip Newline - do nothing
   }
 
+
+  struct handPair h;
+  h.black = b;
+  h.white = w;
+
   return h;
 }
+
+void printValue (enum value v) {
+  switch (v) {
+    case TWO:
+      printf ("2");
+      break;
+    case THREE:
+      printf ("3");
+      break;
+    case FOUR:
+        printf ("4");
+      break;
+    case FIVE:
+        printf ("5");
+      break;
+    case SIX:
+        printf ("6");
+      break;
+    case SEVEN:
+        printf ("7");
+      break;
+    case EIGHT:
+        printf ("8");
+      break;
+    case NINE:
+        printf ("9");
+      break;
+    case TEN:
+        printf ("10");
+      break;
+    case JACK:
+        printf ("J");
+      break;
+    case QUEEN:
+        printf ("Q");
+      break;
+    case KING:
+        printf ("K");
+      break;
+    case ACE:
+        printf ("A");
+      break;
+    default:
+      printf ("Invalid Value: %d\n", v);
+      break;
+  }  
+}
+
+void printSuit (enum suit s) {
+  switch (s) {
+    case CLUBS:
+      printf ("C");
+      break;
+    case DIAMONDS:
+      printf ("D");
+      break;
+    case HEARTS:
+      printf ("H");
+      break;
+    case SPADES:
+      printf ("S");
+      break;
+    default:
+      printf ("Invalid Suit: %c\n", s);
+      break;
+  }
+}
+
+void printHand (struct hand h) {
+  for (int i = 0; i < gCardsInHand; i++) {
+    printValue (h.c[i].v);
+    printSuit(h.c[i].s);
+    printf (" ");
+  }
+}
+
+
 
 
 // Rank Functions - straight/flush/straight-flush
@@ -202,3 +304,6 @@ int straightFlush (struct hand h) {
 
 
 
+void compareHands (struct handPair hp) {
+  if (straightFlush(hp.black))
+}
