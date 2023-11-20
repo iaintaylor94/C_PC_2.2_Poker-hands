@@ -10,7 +10,7 @@ const gMaxValue = 13;
 
 //Define Enums
 enum suit { CLUBS, DIAMONDS, HEARTS, SPADES };
-enum value { TWO = 0, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE };
+enum value { TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE, TEN, JACK, QUEEN, KING, ACE };
 
 // Define Structs
 struct card { enum suit s; enum value v; };
@@ -60,12 +60,10 @@ void usage (char *cmd) {
   exit (EXIT_SUCCESS);
 }
 
-// Define Structs
-struct card { enum suit s; enum value v; };
-struct hand { struct card c[gCardsInHand]; };
 
 
-// Rank Functions - straight/flush/straight flush
+
+// Rank Functions - straight/flush/straight-flush
 int maxValue (struct hand h) {
   int max = 0;
   for (int i = 0; i < gCardsInHand ; i++) {
@@ -95,5 +93,23 @@ int straight (struct hand h) {
   }
 }
 
-bool flush (struct hand);
-int straightFlush (struct hand);
+bool flush (struct hand h) {
+  // CLUBS, DIAMONDS, HEARTS, SPADES
+  enum suit flushType = h.c[0].s; // Initialize first card
+  for (int i = 1; i < gCardsInHand; i++) {
+    if (h.c[i].s != flushType) {
+      return false;
+    }
+  }
+  return true;
+}
+
+int straightFlush (struct hand h) {
+  if (flush (h)) {
+    return straight(h);
+  }
+
+  return -1;
+}
+
+
