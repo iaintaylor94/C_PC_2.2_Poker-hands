@@ -7,7 +7,12 @@
 // Define Constants
 const int gCardsInHand = 5;
 const int gNumOfSuits = 4;
-const int gMaxValue = 13;
+const int gMaxValue = 12;
+const int gNumValues = gMaxValue + 1;
+
+#define BLACK -1
+#define TIE 0
+#define WHITE +1
 
 //Define Enums
 enum suit { CLUBS, DIAMONDS, HEARTS, SPADES };
@@ -28,23 +33,48 @@ void usage (char *);
 enum value charToValue (char);
 enum suit charToSuit (char);
 struct handPair readHand (void);
+
 // Print Hand
 void printValue (enum value);
 void printSuit (enum suit);
 void printHand (struct hand);
 
-// Rank Functions - Highest rank first
-int straightFlush (struct hand);     bool compareStraightFlush (struct handPair);
-int fourOfKind (struct hand);        bool compareFourOfKind (struct handPair);
-// Full house
-int flush (struct hand);             bool compareFlush (struct handPair);
-int straight (struct hand);          bool compareStraight (struct handPair);
-// Three of Kind
-// Two Pairs
-// Pair
-int highCard (struct hand);          bool compareHighCard (struct handPair);
+// Needed for Rank functions
+int maxValue (struct hand);
+int minValue (struct hand);
+int cmpFunc (const void *, const void *);
+struct hand sortCard (struct hand);
+void printWinner (int);
+void removeCards (struct hand*, int);
+
+// Is Rank Functions - Highest rank first
+bool isStraightFlush (struct hand);
+bool isFourOfAKind (struct hand);
+bool isFullHouse (struct hand);
+bool isFlush (struct hand);
+bool isStraight (struct hand);
+bool isThreeOfAKind (struct hand);
+bool isTwoPair (struct hand);
+bool isPair (struct hand);
+// High card not needed
+
+// Rank Functions
+int highCard (struct hand, struct hand, int);
+int highestPair (struct hand, int);
+int highestTripple (struct hand, int);
+int highestStraight (struct hand);
+int highestFour (struct hand);
 
 // Compare Hands
+void compareStraightFlush (struct hand, struct hand);
+void compareFourOfAKind (struct hand, struct hand);
+void compareFullHouse (struct hand, struct hand);
+void compareFlush (struct hand, struct hand);
+void compareStraight (struct hand, struct hand);
+void compareThreeOfAKind (struct hand, struct hand);
+void compareTwoPair (struct hand, struct hand);
+void comparePair (struct hand, struct hand);
+void compareHighCard (struct hand, struct hand);
 void compareHands (struct handPair);
 
 
@@ -261,7 +291,7 @@ void printHand (struct hand h) {
 
 
 
-// Rank Functions - straight/flush/straight-flush
+// Common Functions
 int maxValue (struct hand h) {
   int max = 0;
   for (int i = 0; i < gCardsInHand ; i++) {
@@ -282,215 +312,372 @@ int minValue (struct hand h) {
   return min;
 }
 
-int straight (struct hand h) {
-  // 1. Not straight - return -1
-  // 2. Straight - return max value (0 .. 12)
-  if (maxValue(h) == minValue(h) + 4) {
-    return (maxValue(h)); // 2.
+
+
+int cmpFunc (const void * a, const void * b) {
+  return ( *(int*)a - *(int*)b );
+}
+struct hand sortCard (struct hand h) {
+  // 1. Sort cards in descending order (highest card first)
+  qsort (h.c, gCardsInHand, sizeof(struct card), cmpFunc);
+
+  return h;
+}
+void printWinner (int w) {
+  if (w == BLACK) {
+    printf ("Black wins.\n");
+  }
+  else if (w == WHITE) {
+    printf ("White wins.\n");
+  }
+  else if (w == TIE) {
+    printf ("Tie.\n");
+  }
+}
+void removeCards (struct hand *h, int n) {
+  for (int i = 0; i < gCardsInHand; i++) {
+    if (h->c[i].v == n) {
+      h->c[i].v = -1;
+    }
+  }
+}
+
+
+// isHand
+bool isPair (struct hand h) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < gCardsInHand; i++) {
+    val[h.c[i].v]++;
+  }
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 2) {
+      return (true);
+    }
+  }
+  return (false);
+}
+
+bool isTwoPair (struct hand h) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < gCardsInHand; i++) {
+    val[h.c[i].v]++;
+  }
+  int numDoubles = 0;
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 2) {
+      numDoubles++;
+    }
+  }
+  if (numDoubles == 2) {
+    return (true);
   }
   else {
-    return -1; // 1.
+    return (false);
   }
 }
-bool compareStraight (struct handPair hp) {
-  // 1. NONE (black = -1 : white = -1) - return false
-  // 2. BLACK WINS (black > white) - return true
-  // 3. WHITE WINS (black < white) - return true
-  // 4. TIE (black = white) - return true
 
-  if (straight(hp.black) == -1 && straight(hp.white) == -1) { // 1.
-    return false;
+bool isThreeOfAKind (struct hand h) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < gCardsInHand; i++) {
+    val[h.c[i].v]++;
   }
-  else if (straight(hp.black) > straight(hp.white)) { // 2.
-    printf ("Black wins.\n");
-    return true;
-  }
-  else if (straight(hp.black) < straight(hp.white)) { // 3.
-    printf ("White wins.\n");
-    return true;
-  }
-  else if (straight(hp.black) == straight(hp.white)) { // 4.
-    printf ("Tie.\n");
-    return true;
-  }
-
-  return true;
-}
-
-int flush (struct hand h) {
-  // 1. not flush - return -1
-  // 2. is flush - return max value (0 .. 12)
-  enum suit flushType = h.c[0].s; // Initialize first card
-  for (int i = 1; i < gCardsInHand; i++) {
-    if (h.c[i].s != flushType) {
-      return -1; // 1.
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 3) {
+      return (true);
     }
   }
-  return maxValue (h); // 2.
+  return (false);
 }
 
-bool compareFlush (struct handPair hp) {
-  // 1. NONE (black = -1 : white = -1) - return false
-  // 2. BLACK WINS (black > white) - return true
-  // 3. WHITE WINS (black < white) - return true
-  // 4. TIE (black = white) - return true
-
-  if (flush(hp.black) == -1 && flush(hp.white) == -1) { // 1.
-    return false;
-  }
-  else if (flush(hp.black) > flush(hp.white)) { // 2.
-    printf ("Black wins.\n");
-    return true;
-  }
-  else if (flush(hp.black) < flush(hp.white)) { // 3.
-    printf ("White wins\n");
-    return true;
-  }
-  else if (flush(hp.black) == flush(hp.white)) { // 4.
-    printf ("Tie\n");
-    return true;
-  }
-
-  return true;
-}
-
-int straightFlush (struct hand h) {
-  // 1. not straightFlush - return -1
-  // 2. is straightFlush - return max value (0 .. 12)
-  if (flush (h) != -1) {
-    return straight(h);
-  }
-
-  return -1;
-}
-
-
-bool compareStraightFlush(struct handPair hp) {
-  // 1. NONE (black = -1 : white = -1) - return false
-  // 2. BLACK WINS (black > white) - return true
-  // 3. WHITE WINS (black < white) - return true
-  // 4. TIE (black = white) - return true
-
-
-  if (straightFlush(hp.black) == -1 && straightFlush(hp.white) == -1) { // 1.
-    return false;
-  }
-  else if (straightFlush(hp.black) > straightFlush(hp.white)) { // 2.
-    printf ("Black wins.\n");
-    return true;
-  }
-  else if (straightFlush(hp.black) < straightFlush(hp.white)) { // 3.
-    printf ("White wins.\n");
-    return true;
-  }
-  else if (straightFlush(hp.black) == straightFlush(hp.white)) { // 4.
-    printf ("Tie.\n");
-    return true;
-  }
-  
-  return true;
-}
-
-int fourOfKind (struct hand h) {
-  // 1. not fourOFKind - return -1
-  // 2. is fourOfKind - return max value (0 .. 12)
-
-  int numInSuit [gNumOfSuits] = {0}; 
+bool isStraight (struct hand h) {
+  int val[gNumValues] = {0};
   for (int i = 0; i < gCardsInHand; i++) {
-    numInSuit [h.c[i].s]++;
+    val[h.c[i].v]++;
   }
+  int numConsecutive = 0;
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 1) {
+      numConsecutive++;
+    }
+    if (numConsecutive == 5) {
+      return (true);
+    }
+    else if (val[i] != 1) {
+      numConsecutive = 0;
+    }
+  }
+  return (false);
+}
 
+bool isFlush (struct hand h) {
+  int val[gNumOfSuits] = {0};
+  for (int i = 0; i < gCardsInHand; i++) {
+    val[h.c[i].s]++;
+  }
   for (int i = 0; i < gNumOfSuits; i++) {
-    if (numInSuit[i] == 4) {
-      return maxValue (h); // 2.
+    if (val[i] == 5) {
+      return (true);
     }
   }
-  
-  return -1; // 1.
-}
-bool compareFourOfKind(struct handPair hp) {
-  // 1. NONE (black = -1 : white = -1) - return false
-  // 2. BLACK WINS (black > white) - return true
-  // 3. WHITE WINS (black < white) - return true
-  // 4. TIE (black = white) - return true
-
-  if (fourOfKind(hp.black) == -1 && fourOfKind(hp.white) == -1) { // 1
-    return false;
-  }
-  else if (fourOfKind(hp.black) > fourOfKind(hp.white)) { // 2.
-    printf ("Black wins.\n");
-    return true;
-  }
-  else if (fourOfKind(hp.black) < fourOfKind(hp.white)) { // 3.
-    printf ("White wins.\n");
-    return true;
-  }
-  else if (fourOfKind(hp.black) == fourOfKind(hp.white)) { // 4.
-    printf ("Tie.\n");
-    return true;
-  }
-
-  return true;
+  return (false);
 }
 
-
-
-int pair (struct hand h) {
-  // 1. not pair - return -1
-  // 2. is pair - return max value (0 .. 12)
-
-  int numInSuit [gNumOfSuits] = {0};
+bool isFullHouse (struct hand h) {
+  int val[gNumValues] = {0};
   for (int i = 0; i < gCardsInHand; i++) {
-    numInSuit [h.c[i].s]++;
+    val[h.c[i].v]++;
   }
-    for (int i = 0; i < gNumOfSuits; i++) {
-      if (numInSuit[i] == 2) {
-}
-bool comparePair (struct handPair hp) {
-  // 1. NONE (black = -1 : white = -1) - return false
-  // 2. BLACK WINS (black > white) - return true
-  // 3. WHITE WINS (black < white) - return true
-  // 4. TIE (black = white) - return true
-
-}
-
-int highCard (struct hand h) {
-  // 1. return max value
-  return maxValue (h);
-}
-bool compareHighCard(struct handPair hp) {
-  // 1. BLACK WINS (black > white) - return true
-  // 2. WHITE WINS (black < white) - return true
-  // 3. TIE (black = white) - return true
-
-  if (highCard(hp.black) > highCard(hp.white)) { // 1.
-    printf ("Black wins.\n");
-    return true;
+  bool two, three;
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 2) {
+      two = true;
+    }
+    if (val[i] == 3) {
+      three = true;
+    }
   }
-  else if (highCard(hp.black) < highCard(hp.white)) { // 2.
-    printf ("White wins.\n");
-    return true;
+  if (two && three) {
+    return (true);
   }
-  else if (highCard(hp.black) == highCard(hp.white)) { // 3.
-    printf ("Tie.\n");
-    return true;
+  else {
+    return (false);
   }
-
-  return true;
 }
+
+bool isFourOfAKind (struct hand h) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < gCardsInHand; i++) {
+    val[h.c[i].v]++;
+  }
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 4) {
+      return (true);
+    }
+  }
+  return (false);
+}
+
+bool isStraightFlush (struct hand h) {
+  if (isStraight(h) && isFlush(h)) {
+    return (true);
+  }
+  else {
+    return (false);
+  }
+}
+
+// Hands
+int highCard (struct hand b, struct hand w, int nc) {
+  b = sortCard (b);
+  w = sortCard (w);
+
+  for (int i = 0; i < nc; i++) {
+    if (b.c[i].v > w.c[i].v) {
+      return (BLACK);
+    }
+    else if (b.c[i].v < w.c[i].v) {
+      return (WHITE);
+    }
+    else {
+      return (TIE);
+    }
+  }
+  return (TIE);
+}
+
+int highestPair (struct hand h, int nc) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < nc; i++) {
+    val[h.c[i].v]++;
+  }
+  int highest = -1;
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 2) {
+      highest = i;
+    }
+  }
+  return (highest);
+}
+
+int highestTripple (struct hand h, int nc) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < nc; i++) {
+    val[h.c[i].v]++;
+  }
+  int highest = -1;
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 3) {
+      highest = i;
+    }
+  }
+  return (highest);
+}
+
+int highestStraight (struct hand h) {
+  if (isStraight(h)) {
+    return (maxValue(h));
+  }
+  else {
+    return (-1);
+  }
+}
+
+int highestFour (struct hand h) {
+  int val[gNumValues] = {0};
+  for (int i = 0; i < gCardsInHand; i++) {
+    val[h.c[i].v]++;
+  }
+  int highest = -1;
+  for (int i = 0; i < gNumValues; i++) {
+    if (val[i] == 4) {
+      highest = i;
+    }
+  }
+  return (highest);
+}
+
+
+// Compare Functions
+void compareHighCards (struct hand b, struct hand w, int nc) {
+  int winner = highCard (b, w, nc);
+  printWinner (winner);
+}
+
+void comparePair (struct hand b, struct hand w, int nc) {
+  int hpBlack = highestPair (b, nc);
+  int hpWhite = highestPair (w, nc);
+
+  if (hpBlack > hpWhite) {
+    printWinner(BLACK);
+  }
+  else if (hpBlack < hpWhite) {
+    printWinner(WHITE);
+  }
+  else {
+    removeCards (&b, hpBlack);
+    removeCards (&w, hpWhite);
+    compareHighCards (b, w, nc - 2);
+  }
+}
+  
+void compareTwoPairs (struct hand b, struct hand w, int nc) {
+  int hpBlack = highestPair (b, nc);
+  int hpWhite = highestPair (w, nc);
+
+  if (hpBlack > hpWhite) {
+    printWinner(BLACK);
+  }
+  else if (hpBlack < hpWhite) {
+    printWinner(WHITE);
+  }
+  else {
+    removeCards (&b, hpBlack);
+    removeCards (&w, hpWhite);
+    comparePair (b, w, nc - 2);
+  }
+}
+
+void compareThreeOfAKind (struct hand b, struct hand w, int nc) {
+  int hpBlack = highestTripple (b, nc);
+  int hpWhite = highestTripple (w, nc);
+
+  if (hpBlack > hpWhite) {
+    printWinner(BLACK);
+  }
+  else if (hpBlack < hpWhite) {
+    printWinner(WHITE);
+  }
+  else {
+    removeCards (&b, hpBlack);
+    removeCards (&w, hpWhite);
+    compareTwoPairs (b, w, nc - 3);
+  }
+}
+
+void compareStraight (struct hand b, struct hand w) {
+  int hpBlack = highestStraight (b);
+  int hpWhite = highestStraight (w);
+
+  if (hpBlack > hpWhite) {
+    printWinner(BLACK);
+  }
+  else if (hpBlack < hpWhite) {
+    printWinner(WHITE);
+  }
+  else {
+    printWinner(TIE);
+  }
+}
+
+void compareFlush (struct hand b, struct hand w) {
+  if (isFlush(b) && isFlush(w)) {
+    compareHighCards (b, w, gCardsInHand);
+  }
+  else if (isFlush(b)) {
+    printWinner(BLACK);
+  }
+  else {
+    printWinner(WHITE);
+  }
+}
+
+void compareFullHouse (struct hand b, struct hand w) {
+  int h3Black = highestTripple (b, gCardsInHand);
+  int h3White = highestTripple (w, gCardsInHand);
+
+  if (h3Black > h3White) {
+    printWinner(BLACK);
+  }
+  else if (h3Black < h3White) {
+    printWinner(WHITE);
+  }
+  else {
+    removeCards (&b, h3Black);
+    removeCards (&w, h3White);
+    comparePair (b, w, gCardsInHand - 3);
+  }
+}
+
+void compareFourOfAKind (struct hand b, struct hand w) {
+  int hpBlack = highestFour (b);
+  int hpWhite = highestFour (w);
+
+  if (hpBlack > hpWhite) {
+    printWinner(BLACK);
+  }
+  else if (hpBlack < hpWhite) {
+    printWinner(WHITE);
+  }
+  else {
+    removeCards (&b, hpBlack);
+    removeCards (&w, hpWhite);
+    compareHighCards (b, w, gCardsInHand - 4);
+  }
+}
+
+void compareStraightFlush (struct hand b, struct hand w) {
+  if (isFlush(b) && isStraight(b) && isFlush(w) && isStraight(w)) {
+    compareStraight (b, w);
+  }
+  else if (isFlush(b) && isStraight(b)) {
+    printWinner(BLACK);
+  }
+  else if (isFlush(w) && isStraight(w)) {
+    printWinner(WHITE);
+  }
+}
+
+
 
 
 void compareHands (struct handPair hp) {
-  if (compareStraightFlush(hp)) {}
-  else if (compareFourOfAKind(hp)) {}
-  else if (compareFullHouse(hp)) {}
-  else if (compareFlush(hp)) {}
-  else if (compareStraight(hp)) {}
-  else if (compareThreeOfAKind(hp)) {}
-  else if (compareTwoPair(hp)) {}
-  else if (comparePair(hp)) {}
-  else if (compareHighCard(hp)) {}
-  else {
-    printf ("Tie.\n");
-  }
+  if      (isStraightFlush(hp.black) || isStraightFlush(hp.white))  { compareStraightFlush(hp.black, hp.white); }
+  else if (isFourOfAKind(hp.black) || isFourOfAKind(hp.white))      { compareFourOfAKind(hp.black, hp.white); }
+  else if (isFullHouse(hp.black) || isFullHouse(hp.white))          { compareFullHouse(hp.black, hp.white); }
+  else if (isFlush(hp.black) || isFlush(hp.white))                  { compareFlush(hp.black, hp.white); }
+  else if (isStraight(hp.black) || isStraight(hp.white))            { compareStraight(hp.black, hp.white); }
+  else if (isThreeOfAKind(hp.black) || isThreeOfAKind(hp.white))    { compareThreeOfAKind(hp.black, hp.white, gCardsInHand); }
+  else if (isTwoPair(hp.black) || isTwoPair(hp.white))              { compareTwoPairs(hp.black, hp.white, gCardsInHand); }
+  else if (isPair(hp.black) || isPair(hp.white))                    { comparePair(hp.black, hp.white, gCardsInHand); }
+  else                                                              { compareHighCards(hp.black, hp.white, gCardsInHand); }
 }
