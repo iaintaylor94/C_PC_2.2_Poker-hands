@@ -71,11 +71,13 @@ void compareFourOfAKind (struct hand, struct hand);
 void compareFullHouse (struct hand, struct hand);
 void compareFlush (struct hand, struct hand);
 void compareStraight (struct hand, struct hand);
-void compareThreeOfAKind (struct hand, struct hand);
+void compareThreeOfAKind (struct hand, struct hand, int);
 void compareTwoPair (struct hand, struct hand);
-void comparePair (struct hand, struct hand);
+void comparePair (struct hand, struct hand, int);
 void compareHighCard (struct hand, struct hand);
 void compareHands (struct handPair);
+
+void printHighestHand (struct handPair);
 
 
 int main(int argc, char *argv[]) {
@@ -94,9 +96,16 @@ int main(int argc, char *argv[]) {
   /*--------------------------------MAIN PROGRAM START------------------------------------*/
 
   struct handPair hp = readHand();
-  printHand (hp.black);
-  printHand (hp.white);
-  printf ("\n");
+  compareHands(hp);
+
+  hp = readHand();
+  compareHands(hp);
+  
+  hp = readHand();
+  compareHands(hp);
+
+  hp = readHand();
+  compareHands(hp);
 
 
   
@@ -315,7 +324,12 @@ int minValue (struct hand h) {
 
 
 int cmpFunc (const void * a, const void * b) {
-  return ( *(int*)a - *(int*)b );
+  struct card f = *(struct card*)a;
+  struct card s = *(struct card*)b;
+
+  if (f.v > s.v) return (-1);
+  else if (f.v < s.v) return (1);
+  else return (0);
 }
 struct hand sortCard (struct hand h) {
   // 1. Sort cards in descending order (highest card first)
@@ -427,7 +441,7 @@ bool isFullHouse (struct hand h) {
   for (int i = 0; i < gCardsInHand; i++) {
     val[h.c[i].v]++;
   }
-  bool two, three;
+  bool two = false, three = false;
   for (int i = 0; i < gNumValues; i++) {
     if (val[i] == 2) {
       two = true;
@@ -468,6 +482,7 @@ bool isStraightFlush (struct hand h) {
 
 // Hands
 int highCard (struct hand b, struct hand w, int nc) {
+  
   b = sortCard (b);
   w = sortCard (w);
 
@@ -479,7 +494,7 @@ int highCard (struct hand b, struct hand w, int nc) {
       return (WHITE);
     }
     else {
-      return (TIE);
+      continue;
     }
   }
   return (TIE);
@@ -669,7 +684,6 @@ void compareStraightFlush (struct hand b, struct hand w) {
 
 
 
-
 void compareHands (struct handPair hp) {
   if      (isStraightFlush(hp.black) || isStraightFlush(hp.white))  { compareStraightFlush(hp.black, hp.white); }
   else if (isFourOfAKind(hp.black) || isFourOfAKind(hp.white))      { compareFourOfAKind(hp.black, hp.white); }
@@ -680,4 +694,28 @@ void compareHands (struct handPair hp) {
   else if (isTwoPair(hp.black) || isTwoPair(hp.white))              { compareTwoPairs(hp.black, hp.white, gCardsInHand); }
   else if (isPair(hp.black) || isPair(hp.white))                    { comparePair(hp.black, hp.white, gCardsInHand); }
   else                                                              { compareHighCards(hp.black, hp.white, gCardsInHand); }
+}
+
+void printHighestHand (struct handPair hp) {
+
+  if      (isStraightFlush(hp.black))  { printf ("BLACK: Straight Flush\n"); }
+  else if (isFourOfAKind(hp.black))    { printf ("BLACK: Four of a Kind\n"); }
+  else if (isFullHouse(hp.black))      { printf ("BLACK: Full House\n"); }
+  else if (isFlush(hp.black))          { printf ("BLACK: Flush\n"); }
+  else if (isStraight(hp.black))       { printf ("BLACK: Straight\n"); }
+  else if (isThreeOfAKind(hp.black))   { printf ("BLACK: Three of a Kind\n"); }
+  else if (isTwoPair(hp.black))        { printf ("BLACK: Two Pairs\n"); }
+  else if (isPair(hp.black))           { printf ("BLACK: Pair\n"); }
+  else                                 { printf ("BLACK: High Card\n"); }
+
+  if      (isStraightFlush(hp.white))  { printf ("WHITE: Straight Flush\n"); }
+  else if (isFourOfAKind(hp.white))    { printf ("WHITE: Four of a Kind\n"); }
+  else if (isFullHouse(hp.white))      { printf ("WHITE: Full House\n"); }
+  else if (isFlush(hp.white))          { printf ("WHITE: Flush\n"); }
+  else if (isStraight(hp.white))       { printf ("WHITE: Straight\n"); }
+  else if (isThreeOfAKind(hp.white))   { printf ("WHITE: Three of a Kind\n"); }
+  else if (isTwoPair(hp.white))        { printf ("WHITE: Two Pairs\n"); }
+  else if (isPair(hp.white))           { printf ("WHITE: Pair\n"); }
+  else                                 { printf ("WHITE: High Card\n"); }
+  
 }
