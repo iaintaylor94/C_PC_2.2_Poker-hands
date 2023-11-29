@@ -40,6 +40,7 @@ void printSuit (enum suit);
 void printHand (struct hand);
 
 // Needed for Rank functions
+bool isEmpty (struct handPair);
 int maxValue (struct hand);
 int minValue (struct hand);
 int cmpFunc (const void *, const void *);
@@ -95,17 +96,13 @@ int main(int argc, char *argv[]) {
 
   /*--------------------------------MAIN PROGRAM START------------------------------------*/
 
+
   struct handPair hp = readHand();
-  compareHands(hp);
+  while (isEmpty(hp) == false) {
+    compareHands(hp);
+    hp = readHand();
+  }
 
-  hp = readHand();
-  compareHands(hp);
-  
-  hp = readHand();
-  compareHands(hp);
-
-  hp = readHand();
-  compareHands(hp);
 
 
   
@@ -196,30 +193,53 @@ struct handPair readHand (void) {
   // I/O
   const int lineLength = 31;
   char inputArray[lineLength];
-  fgets (inputArray, lineLength, gInputFile);
+  char *isEnd = fgets (inputArray, lineLength, gInputFile);
   inputArray[lineLength - 1] = '\0'; // Replace '\n' with '\0'
 
-  // Fill black Hand
-  struct hand b;
+  if (isEnd == NULL) {
+    struct handPair empty;
+    for (int i = 0; i < gCardsInHand; i++) {
+      empty.black.c[i].v = -1; // Get Value
+      empty.black.c[i].s = -1; // Get Suit
+      empty.white.c[i].v = -1; // Get Value
+      empty.white.c[i].s = -1; // Get Suit
+    }
+    return empty;
+  }
+  else {
+    // Fill black Hand
+    struct hand b;
+    for (int i = 0; i < gCardsInHand; i++) {
+      b.c[i].v = charToValue(inputArray[i * 3 + 0]); // Get Value
+      b.c[i].s = charToSuit(inputArray[i * 3 + 1]); // Get Suit
+      // Strip Newline - do nothing
+    }
+    // Fill white Hand
+    struct hand w;
+    for (int i = gCardsInHand, j = 0; i < 2 * gCardsInHand; i++, j++) {
+      w.c[j].v = charToValue(inputArray[i * 3 + 0]); // Get Value
+      w.c[j].s = charToSuit(inputArray[i * 3 + 1]); // Get Suit
+      // Strip Newline - do nothing
+    }
+
+    struct handPair h;
+    h.black = b;
+    h.white = w;
+
+    return h;
+  }
+}
+
+bool isEmpty (struct handPair hp) {
   for (int i = 0; i < gCardsInHand; i++) {
-    b.c[i].v = charToValue(inputArray[i * 3 + 0]); // Get Value
-    b.c[i].s = charToSuit(inputArray[i * 3 + 1]); // Get Suit
-    // Strip Newline - do nothing
+    if (hp.black.c[i].v != -1 || hp.black.c[i].s != -1) {
+      return false;
+    }
+    else if (hp.white.c[i].v != -1 || hp.white.c[i].s) {
+      return false;
+    }
   }
-  // Fill white Hand
-  struct hand w;
-  for (int i = gCardsInHand, j = 0; i < 2 * gCardsInHand; i++, j++) {
-    w.c[j].v = charToValue(inputArray[i * 3 + 0]); // Get Value
-    w.c[j].s = charToSuit(inputArray[i * 3 + 1]); // Get Suit
-    // Strip Newline - do nothing
-  }
-
-
-  struct handPair h;
-  h.black = b;
-  h.white = w;
-
-  return h;
+  return true;
 }
 
 void printValue (enum value v) {
